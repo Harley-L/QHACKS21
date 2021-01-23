@@ -23,7 +23,7 @@ def create_email():
 
 
 def register(email, password, inbox):
-    print('Registering')
+    print('Registering Account')
     DCC_browser.get('https://portal.distributed.computer')
 
     reg = DCC_browser.find_element_by_id("splash-signup")
@@ -60,7 +60,7 @@ def slicer(startstring, endstring, string):
 
 
 def verify(inbox):
-    print("Verifying")
+    print("Verifying Email")
     with mailslurp_client.ApiClient(configuration) as api_client:
         # Find the inbox
         inbox_1 = inbox
@@ -87,7 +87,7 @@ def print_elements():
 
 
 def navigate_page(accountaddress, email, password):
-    print('Waiting for funds')
+    print('Waiting for Funds')
 
     time.sleep(3)
 
@@ -106,7 +106,7 @@ def navigate_page(accountaddress, email, password):
         if amount[0] != '0':
             break
 
-    print('Transferring')
+    print('Transferring Credits')
 
     element = DCC_browser.find_element_by_class_name("chevron-icon")
     element.click()
@@ -124,23 +124,34 @@ def navigate_page(accountaddress, email, password):
 
     element = DCC_browser.find_element_by_class_name("continue.green-modal-button")
     element.click()
+
+    time.sleep(3)
     print('Done')
     pass
 
 
-path_to_chromedriver = 'C:/Users/harle/Documents/chromedriver'  # change path as needed
-option = webdriver.ChromeOptions()
-option.add_argument("--headless")
+def run():
+    inbox, email = create_email()
 
-headless = False
+    thepassword = 'password'
 
-if headless:
-    DCC_browser = webdriver.Chrome(executable_path=path_to_chromedriver, options=option)
-else:
-    DCC_browser = webdriver.Chrome(executable_path=path_to_chromedriver)
+    register(email, thepassword, inbox)
 
-inbox, email = create_email()
 
-thepassword = 'password'
+if __name__ == '__main__':
+    path_to_chromedriver = 'C:/Users/harle/Documents/chromedriver'  # change path as needed
+    option = webdriver.ChromeOptions()
+    option.add_argument("--headless")
 
-register(email, thepassword, inbox)
+    num_iterations = 1
+
+    for i in range(num_iterations):
+        headless = False
+
+        if headless:
+            DCC_browser = webdriver.Chrome(executable_path=path_to_chromedriver, options=option)
+        else:
+            DCC_browser = webdriver.Chrome(executable_path=path_to_chromedriver)
+
+        run()
+        DCC_browser.quit()
