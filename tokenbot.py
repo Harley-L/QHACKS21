@@ -2,24 +2,30 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 import pyperclip
 import time
+api_key = '554300a3c04b316e113c71d1008ae5c6a88149218fc3db03b0e7e6d791b7c779'
+import mailslurp_client
+import re
+
+configuration = mailslurp_client.Configuration()
+configuration.api_key['x-api-key'] = api_key
 
 
 def create_email():
     print('Creating Email')
-    email_url = 'https://temp-mail.org/en/'
+    with mailslurp_client.ApiClient(configuration) as api_client:
 
-    email_browser.get(email_url)
+        # create an inbox using the inbox controller
+        api_instance = mailslurp_client.InboxControllerApi(api_client)
+        inbox = api_instance.create_inbox()
 
-    time.sleep(10)
-
-    email_browser.find_element_by_id('click-to-copy').click()
-
-    email = pyperclip.paste()
-
-    return email
+        # check the id and email_address of the inbox
+        assert len(inbox.id) > 0
+        assert "mailslurp.com" in inbox.email_address
+        return inbox, inbox.email_address
 
 
-def register(email, password):
+
+def register(email, password, inbox):
     print('Registering')
     DCC_browser.get('https://portal.distributed.computer')
 
@@ -35,7 +41,7 @@ def register(email, password):
     password_field.send_keys(password)
     password_field.submit()
 
-    code = verify()
+    code = verify(inbox)
 
     code_field = DCC_browser.find_element_by_xpath('/html/body/div[7]/dialog/form/div[1]/div[1]/div/input')
     code_field.send_keys(code)
@@ -45,47 +51,33 @@ def register(email, password):
     pass
 
 
-def verify():
-    tab_url = 'https://www.google.com'  # URL B
-    email_browser.execute_script("window.open('');")
-    email_browser.switch_to.window(email_browser.window_handles[1])
-    email_browser.get(tab_url)
-    email_browser.close()
-    email_browser.switch_to.window(email_browser.window_handles[0])
-    print('Verifying')
-
-    attempts = 0
-    completed = False
-    while not completed:
-        try:
-            attempts += 1
-            if attempts == 12:
-                break
-            print(attempts)
-            open_email = email_browser.find_element_by_xpath('//*[@id="tm-body"]/main/div[1]/div/div[2]/div[2]/div/div[1]/div/div[4]/ul/li[2]/div[1]/a/span[2]')
-            open_email.click()
-            completed = True
-        except:
-            time.sleep(1)
-
-    if attempts == 12:
-        ids = email_browser.find_elements_by_xpath('//*[@id="tm-body"]')
-        print(ids)
-        for ii in ids:
-            print(1)
-            print(ii.get_attribute('id'))  # id name as string
-
-        #open_email = email_browser.find_element_by_xpath('//*[@id="tm-body"]/main/div[1]/div/div[2]/div[2]/div/div[1]/div/div[4]/ul/li[2]/div[1]/a/span[2]')
-        #open_email.click()
+def slicer(startstring, endstring, string):
+    key = ''
+    index = string.find(startstring)
+    string = string[index + len(startstring):]
+    for char in range(200):
+        if string[char] == endstring:
+            return key
+        else:
+            key += string[char]
 
 
-    code = email_browser.find_element_by_xpath('//*[@id="tm-body"]/main/div[1]/div/div[2]/div[2]/div/div[1]/div/div[2]/div[3]/center[1]/table/tbody/tr/td/table/tbody/tr[2]/td/table/tbody/tr/td/table[2]/tbody/tr/td/table/tbody/tr/td/table/tbody/tr/td/div[1]').text
-    string = code.split(': ')
-    code = string[1]
-    print(code)
-    i = input('-----------------------------------------------------------------------------------------------------------------------')
+def verify(inbox):
+    print("Verifying")
+    with mailslurp_client.ApiClient(configuration) as api_client:
+        # Find the inbox
+        inbox_1 = inbox
 
-    return code
+        # receive email for inbox 1
+        waitfor_controller = mailslurp_client.WaitForControllerApi(api_client)
+        email = waitfor_controller.wait_for_latest_email(inbox_id=inbox_1.id, timeout=30000, unread_only=True)
+
+        assert email.subject == "Welcome to the DCP Network!"
+
+        html = email.body
+        match = slicer("Your verification code is: ","<",html)
+
+        return match
 
 
 def navigate_page(accountaddress):
@@ -93,14 +85,38 @@ def navigate_page(accountaddress):
 
     completed = False
 
-    while not completed:
-        try:
-            element = DCC_browser.find_element_by_xpath('//*[@id="wallet-category"]/div[1]/button')
-            element.click()
-            completed = True
-        except:
-            time.sleep(1)
+    a = 0
 
+    time.sleep(2)
+
+    DCC_browser.get('https://portal.distributed.computer/#Accounts')
+
+    one = DCC_browser.find_element_by_id("splash-email")
+    one.clear()
+    one.send_keys(email)
+
+    two = DCC_browser.find_element_by_id("splash-password")
+    two.clear()
+    two.send_keys('password')
+
+    login = DCC_browser.find_element_by_id("splash-signin")
+    login.click()
+
+    #element = DCC_browser.find_element_by_xpath('//*[@id="wallet-category"]/div[1]/button')
+    #element.click()
+
+    # while not completed:
+    #     try:
+    #         print(a)
+    #         a += 1
+    #         element = DCC_browser.find_element_by_xpath('//*[@id="wallet-category"]/div[1]/button')
+    #         element.click()
+    #         print('found')
+    #         completed = True
+    #     except:
+    #         time.sleep(1)
+
+    print('in wallet')
     time.sleep(1)
 
     clock = 0
@@ -128,7 +144,7 @@ def navigate_page(accountaddress):
     element.send_keys(accountaddress)
 
     element = DCC_browser.find_element_by_xpath('/html/body/div[6]/dialog/form/div[1]/div[2]/div/input')
-    element.send_keys("25")
+    element.send_keys("1")
 
     element = DCC_browser.find_element_by_class_name("continue.green-modal-button")
     element.click()
@@ -141,13 +157,13 @@ option = webdriver.ChromeOptions()
 option.add_argument("--headless")
 
 # email_browser = webdriver.Chrome(executable_path=path_to_chromedriver, options=option)
-# DCC_browser = webdriver.Chrome(executable_path=path_to_chromedriver, options=option)
+DCC_browser = webdriver.Chrome(executable_path=path_to_chromedriver, options=option)
 
-email_browser = webdriver.Chrome(executable_path=path_to_chromedriver)
-DCC_browser = webdriver.Chrome(executable_path=path_to_chromedriver)
+# email_browser = webdriver.Chrome(executable_path=path_to_chromedriver)
+# DCC_browser = webdriver.Chrome(executable_path=path_to_chromedriver)
 
-email = create_email()
+inbox, email = create_email()
 
 thepassword = 'password'
 
-register(email, thepassword)
+register(email, thepassword, inbox)
