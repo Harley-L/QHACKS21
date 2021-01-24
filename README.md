@@ -6,6 +6,9 @@ inherent value. Using Selenium and MailSlurp as our python APIs, we were able to
 platform. Then, we were able to transfer credits from the bots account to the main account. Achieving an efficiency of 
 1150 credits per hour, our platform was able to gain 300x the normal amount of credits in a given period.
 
+Devpost: https://devpost.com/software/breaking-the-dcp-network
+Youtube Demo: https://www.youtube.com/watch?v=cI-zheV3Fts&ab_channel=4Boys
+
 # Disclaimer: 
 Before starting the project, our team told the CEO of Distributed Compute Labs of this potential problem and was given
 the green light to test the security of their system. We did NOT break their system and made this to help better their
