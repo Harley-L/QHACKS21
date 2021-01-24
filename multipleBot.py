@@ -143,10 +143,10 @@ if __name__ == '__main__':
     option = webdriver.ChromeOptions()
     option.add_argument("--headless")
 
-    num_iterations = 1
+    num_iterations = 4
 
     for i in range(num_iterations):
-        headless = False
+        headless = True
 
         if headless:
             DCC_browser = webdriver.Chrome(executable_path=path_to_chromedriver, options=option)

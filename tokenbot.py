@@ -1,16 +1,12 @@
+# Imports
 from selenium import webdriver
 import time
-api_key = '554300a3c04b316e113c71d1008ae5c6a88149218fc3db03b0e7e6d791b7c779'
 import mailslurp_client
 
-configuration = mailslurp_client.Configuration()
-configuration.api_key['x-api-key'] = api_key
 
-
-def create_email():
-    print('Creating Email')
+def create_email():  # Create a temporary email using the mailslurp api
+    print('Creating Email')  # Identifier
     with mailslurp_client.ApiClient(configuration) as api_client:
-
         # create an inbox using the inbox controller
         api_instance = mailslurp_client.InboxControllerApi(api_client)
         inbox = api_instance.create_inbox()
@@ -21,11 +17,11 @@ def create_email():
         return inbox, inbox.email_address
 
 
+def register(email, password, inbox, destination):  # Register user by creating account/validation/navigation
+    print('Registering Account')  # Identifier
 
-def register(email, password, inbox):
-    print('Registering')
+    # Navigation using selenium
     DCC_browser.get('https://portal.distributed.computer')
-
     reg = DCC_browser.find_element_by_id("splash-signup")
     reg.click()
     one = DCC_browser.find_element_by_id("email")
@@ -38,17 +34,18 @@ def register(email, password, inbox):
     password_field.send_keys(password)
     password_field.submit()
 
-    code = verify(inbox)
+    code = verify(inbox)  # Verify in register, Once account verified, continue
 
+    # Submit
     code_field = DCC_browser.find_element_by_xpath('/html/body/div[7]/dialog/form/div[1]/div[1]/div/input')
     code_field.send_keys(code)
-    #code_field.submit()
 
-    navigate_page('0x8E51dD1d76a59c39F055067858606ab048593caA', email, password)
+    # Navigate the user interface with inputting where the token destination is
+    navigate_page(destination, email, password)
     pass
 
 
-def slicer(startstring, endstring, string):
+def slicer(startstring, endstring, string):  # Helper funct6ion to navigate the html in email body
     key = ''
     index = string.find(startstring)
     string = string[index + len(startstring):]
@@ -59,8 +56,8 @@ def slicer(startstring, endstring, string):
             key += string[char]
 
 
-def verify(inbox):
-    print("Verifying")
+def verify(inbox):  # Helper function for register user to interact with mail and return verification code
+    print("Verifying Email")
     with mailslurp_client.ApiClient(configuration) as api_client:
         # Find the inbox
         inbox_1 = inbox
@@ -72,31 +69,22 @@ def verify(inbox):
         assert email.subject == "Welcome to the DCP Network!"
 
         html = email.body
-        match = slicer("Your verification code is: ","<",html)
+        code = slicer("Your verification code is: ", "<", html)
 
-        return match
-
-
-def print_elements():
-    ids = DCC_browser.find_elements_by_xpath('//*[@id]')
-    for ii in ids:
-        # print ii.tag_name
-        print(ii.get_attribute('id'))
-    print(DCC_browser.current_url)
-    pass
+        return code
 
 
-def navigate_page(accountaddress, email, password):
-    print('Waiting for funds')
+def navigate_page(accountaddress, email, password):  # Navigate user interface primarily using selenium
+    print('Waiting for Funds')
 
-    time.sleep(3)
+    time.sleep(3)  # account for reload time
 
-    DCC_browser.get('https://portal.distributed.computer/#Accounts')
+    DCC_browser.get('https://portal.distributed.computer/#Accounts')  # Avoid clicking another button (Easier)
 
-    time.sleep(3)
+    time.sleep(3)  # account for reload time
 
     clock = 0
-    while True:
+    while True:  # Function to check bank balance over and over again until the free credits have been applied
         clock += 2
         print('Time Elapsed: ' + str(clock))
         DCC_browser.find_element_by_class_name('reload-icon').click()
@@ -106,8 +94,9 @@ def navigate_page(accountaddress, email, password):
         if amount[0] != '0':
             break
 
-    print('Transferring')
+    print('Transferring Credits')  # Check statement
 
+    # Selenium code
     element = DCC_browser.find_element_by_class_name("chevron-icon")
     element.click()
 
@@ -119,28 +108,47 @@ def navigate_page(accountaddress, email, password):
     element = DCC_browser.find_element_by_id("transfer-to-address")
     element.send_keys(accountaddress)
 
+    # Input amount to transfer over
     element = DCC_browser.find_element_by_xpath('/html/body/div[6]/dialog/form/div[1]/div[2]/div/input')
     element.send_keys("25")
 
     element = DCC_browser.find_element_by_class_name("continue.green-modal-button")
     element.click()
+
+    time.sleep(3)
     print('Done')
     pass
 
 
-path_to_chromedriver = 'C:/Users/harle/Documents/chromedriver'  # change path as needed
-option = webdriver.ChromeOptions()
-option.add_argument("--headless")
+def run():  # Run one iteration of the program by calling all necessary functions
+    inbox, email = create_email()
 
-headless = False
+    accountpassword = 'password'
+    tokendestination = '0x8E51dD1d76a59c39F055067858606ab048593caA'
 
-if headless:
-    DCC_browser = webdriver.Chrome(executable_path=path_to_chromedriver, options=option)
-else:
-    DCC_browser = webdriver.Chrome(executable_path=path_to_chromedriver)
+    register(email, accountpassword, inbox, tokendestination)
 
-inbox, email = create_email()
 
-thepassword = 'password'
+if __name__ == '__main__':  # Main function that support multiple iterations
+    # Configuring the Temporary mail account
+    api_key = '554300a3c04b316e113c71d1008ae5c6a88149218fc3db03b0e7e6d791b7c779'
+    configuration = mailslurp_client.Configuration()
+    configuration.api_key['x-api-key'] = api_key
 
-register(email, thepassword, inbox)
+    # Configure the chromedriver
+    path_to_chromedriver = 'C:/Users/harle/Documents/chromedriver'  # change path as needed
+    option = webdriver.ChromeOptions()
+    option.add_argument("--headless")
+
+    num_iterations = 4  # Number of iterations
+
+    # For loop for the multiple iterations
+    for i in range(num_iterations):
+        headless = True
+        if headless:
+            DCC_browser = webdriver.Chrome(executable_path=path_to_chromedriver, options=option)
+        else:
+            DCC_browser = webdriver.Chrome(executable_path=path_to_chromedriver)
+
+        run()
+        DCC_browser.quit()
